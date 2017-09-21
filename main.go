@@ -46,6 +46,16 @@ type ItemStatBonus struct {
 	Level int64  `json:"level"`
 }
 
+type ItemBuildingInfo struct {
+	BuildableOnBase      bool   `json:"buildable_on_base"`
+	BuildableOnFreighter bool   `json:"buildable_on_freighter"`
+	BuildableOnPlanet    bool   `json:"buildable_on_planet"`
+	ComplexityCost       int64  `json:"complexity_cost"`
+	Group                string `json:"group"`
+	CanChangeColor       bool   `json:"can_change_color"`
+	CanChangeMaterial    bool   `json:"can_change_material"`
+}
+
 type Item struct {
 	Id                      string            `json:"id"`
 	Name                    string            `json:"name"`
@@ -86,7 +96,7 @@ type Item struct {
 	Cost                    ItemCost          `json:"cost"`
 	RequiredRank            int64             `json:"required_rank"`
 	DispensingRace          string            `json:"dispensing_race"`
-	TechShopRarity          string            `json:"tech_shop_rarity"` // new
+	TechShopRarity          string            `json:"tech_shop_rarity"`
 	SpecificChargeOnly      bool              `json:"specific_charge_only"`
 	NormalisedValueOnWorld  float64           `json:"normalised_value_on_world"`
 	NormalisedValueOffWorld float64           `json:"normalised_value_off_world"`
@@ -94,6 +104,8 @@ type Item struct {
 	WikiEanabled               bool    `json:"wiki_enabled"`
 	IsCraftable                bool    `json:"is_craftable"`
 	EconomyInfluenceMultiplier float64 `json:"economy_influence_multiplier"`
+
+	BuildingInfo *ItemBuildingInfo `json:"building_info"`
 }
 
 func loadDataFile(fileName string) *Data {
@@ -366,6 +378,53 @@ func loadItemFile(items map[string]*Item, fileName string, strings map[string]st
 	}
 }
 
+func handleBuildingObject(items map[string]*Item, entry *Property) {
+	var info ItemBuildingInfo
+	var name string
+
+	for _, data := range entry.Properties {
+		switch data.Name {
+		case "ID":
+			name = handleString(data)
+		case "BuildableOnBase":
+			info.BuildableOnBase = handleBool(data)
+		case "BuildableOnFreighter":
+			info.BuildableOnFreighter = handleBool(data)
+		case "BuildableOnPlanet":
+			info.BuildableOnPlanet = handleBool(data)
+		case "ComplexityCost":
+			info.ComplexityCost = handleInt(data)
+		case "Group":
+			info.Group = handleString(data)
+		case "CanChangeColour":
+			info.CanChangeColor = handleBool(data)
+		case "CanChangeMaterial":
+			info.CanChangeMaterial = handleBool(data)
+		}
+	}
+
+	if item, ok := items[name]; ok {
+		item.BuildingInfo = &info
+	} else {
+		fmt.Errorf("can't find %s in items", name)
+	}
+}
+
+func handleBuildingObjects(items map[string]*Item, entry *Property) {
+	for _, data := range entry.Properties {
+		handleBuildingObject(items, data)
+	}
+}
+
+func loadBuildingFile(items map[string]*Item, fileName string) {
+	data := loadDataFile(fileName)
+	for _, entry := range data.Properties {
+		if entry.Name == "Objects" {
+			handleBuildingObjects(items, entry)
+		}
+	}
+}
+
 func main() {
 	strings := make(map[string]string)
 
@@ -382,6 +441,9 @@ func main() {
 	loadItemFile(items,
 		"data/METADATA/REALITY/TABLES/NMS_REALITY_GCTECHNOLOGYTABLE.exml",
 		strings)
+
+	loadBuildingFile(items,
+		"data/METADATA/REALITY/TABLES/BASEBUILDINGTABLE.exml")
 
 	b, err := json.MarshalIndent(items, "", "  ")
 	if err != nil {
