@@ -1,5 +1,11 @@
 package nmsmine
 
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+)
+
 type ItemCost struct {
 	SpaceStationMarkup float64 `json:"space_station_markup"`
 	LowPriceMod        float64 `json:"low_price_mod"`
@@ -85,4 +91,32 @@ type ItemDb map[string]*Item
 
 func NewItemDb() ItemDb {
 	return make(ItemDb)
+}
+
+func LoadItemDb(filename string) (ItemDb, error) {
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading from %s: %s\n", filename, err.Error())
+	}
+
+	db := NewItemDb()
+	err = json.Unmarshal(b, &db)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding JSON: %s\n", err.Error())
+	}
+	return db, nil
+}
+
+func (db ItemDb) WriteToFile(filename string) error {
+	b, err := json.MarshalIndent(db, "", "  ")
+	if err != nil {
+		return fmt.Errorf("Error encoding JSON: %s\n", err.Error())
+	}
+
+	err = ioutil.WriteFile(filename, b, 0644)
+	if err != nil {
+		return fmt.Errorf("Error writing to %s: %s\n", filename, err.Error())
+	}
+
+	return nil
 }

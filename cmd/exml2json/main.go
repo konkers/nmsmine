@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -18,12 +16,12 @@ func main() {
 	flag.Parse()
 
 	if *dataDir == "" {
-		fmt.Errorf("-data must be specified.\n")
+		fmt.Fprintf(os.Stderr, "-data must be specified.\n")
 		flag.Usage()
 		os.Exit(1)
 	}
 	if *outFile == "" {
-		fmt.Errorf("-out must be specified.\n")
+		fmt.Fprintf(os.Stderr, "-out must be specified.\n")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -45,15 +43,9 @@ func main() {
 	loader.LoadBuildingFile(
 		path.Join(*dataDir, "METADATA/REALITY/TABLES/BASEBUILDINGTABLE.exml"))
 
-	b, err := json.MarshalIndent(loader.Db, "", "  ")
+	err := loader.Db.WriteToFile(*outFile)
 	if err != nil {
-		fmt.Errorf("Error encoding JSON: %s\n", err)
-		os.Exit(1)
-	}
-
-	err = ioutil.WriteFile(*outFile, b, 0644)
-	if err != nil {
-		fmt.Errorf("Error writing to %s: %s\n", *outFile, err)
+		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
